@@ -1,7 +1,7 @@
 # Личный проект «Readme»
 
 * Студент: [Павел Мареев](https://up.htmlacademy.ru/nodejs-2/5/user/1343135).
-* Наставник: `Неизвестно`.
+* Наставник: [Евгений Наумов](https://htmlacademy.ru/profile/id99424).
 
 ---
 
