@@ -16,6 +16,7 @@
     "baseUrl": ".",
     "strict": true,
     "paths": {
+      "@project/shared/repository": ["shared/repository/src/index.ts"],
       "@project/shared/types": ["shared/types/src/index.ts"]
     }
   },
