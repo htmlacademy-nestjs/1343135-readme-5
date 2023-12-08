@@ -2,8 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { Entity } from './entity.type';
 import { Repository } from './repository.interface';
 
-export class MemoryRepository<T extends Entity> implements Repository<T> {
-  private readonly memo = new Map<T['id'], T>();
+export abstract class MemoryRepository<T extends Entity> implements Repository<T> {
+  protected readonly memo = new Map<T['id'], T>();
 
   public async findById(id: T['id']) {
     return this.memo.get(id) || null;

@@ -1,3 +1,3 @@
 export type Entity<T = unknown> = T & {
-  id: string;
+  id?: string;
 };
