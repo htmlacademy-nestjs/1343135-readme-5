@@ -2,9 +2,10 @@ import { ConflictException, Injectable, NotFoundException, UnauthorizedException
 import { UserMemoryRepository } from '../user/user.memory-repository';
 import { UserChangePasswordRequestDto, UserCreateRequestDto, UserGetRequestDto, UserLoginRequestDto } from './dto';
 import { UserEntity } from '../user/user.entity';
+import { AuthService } from './auth.service.interface';
 
 @Injectable()
-export class AuthService {
+export class DefaultAuthService implements AuthService {
   constructor(private readonly userRepository: UserMemoryRepository) {}
 
   public async register(dto: UserCreateRequestDto) {
@@ -65,4 +66,3 @@ export class AuthService {
     return this.userRepository.save(user);
   }
 }
-

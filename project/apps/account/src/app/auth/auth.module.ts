@@ -1,11 +1,17 @@
 import { Module } from '@nestjs/common';
 import { UserModule } from '../user/user.module';
-import { AuthService } from './auth.service';
+import { DefaultAuthService } from './auth.service';
 import { AuthController } from './auth.controller';
+import { ProviderToken } from './auth.const';
+
+const AuthServiceProvider = {
+  provide: ProviderToken.AuthService,
+  useClass: DefaultAuthService,
+};
 
 @Module({
   imports: [UserModule],
-  providers: [AuthService],
+  providers: [AuthServiceProvider],
   controllers: [AuthController],
 })
 export class AuthModule {}

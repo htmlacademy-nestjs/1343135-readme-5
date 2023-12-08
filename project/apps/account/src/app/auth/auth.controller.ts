@@ -1,12 +1,13 @@
-import { Body, Controller, Get, HttpCode, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Inject, Param, Patch, Post } from '@nestjs/common';
 import { fillDto } from '@project/shared/helpers';
-import { AuthService } from './auth.service';
+import { AuthService } from './auth.service.interface';
 import { UserChangePasswordRequestDto, UserCreateRequestDto, UserGetRequestDto, UserLoginRequestDto, UserResponseDto } from './dto';
 import { StatusCodes } from 'http-status-codes';
+import { ProviderToken } from './auth.const';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(@Inject(ProviderToken.AuthService) private readonly authService: AuthService) {}
 
   @Post('register')
   public async register(@Body() dto: UserCreateRequestDto) {
