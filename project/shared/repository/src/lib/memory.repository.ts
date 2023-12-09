@@ -17,6 +17,7 @@ export abstract class MemoryRepository<T extends Entity> implements Repository<T
     this.memo.set(entity.id, entity);
     return entity;
   }
+
   public async update(id: T['id'], entity: T) {
     const existing = this.memo.get(id);
 
@@ -24,7 +25,7 @@ export abstract class MemoryRepository<T extends Entity> implements Repository<T
       throw new Error(`Entity with provided id "${id}" does not exist`);
     }
 
-    this.memo.set(id, entity);
+    this.memo.set(id, { ...existing, ...entity, id });
     return entity;
   }
 
