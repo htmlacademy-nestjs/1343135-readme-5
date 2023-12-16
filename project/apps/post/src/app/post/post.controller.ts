@@ -1,12 +1,25 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
 import { PostService } from './post.service';
-import { PostCreateRequestDto, PostUpdateRequestDto, PostGetByIdRequestDto } from './dto';
+import {
+  PostCreateRequestDto,
+  PostUpdateRequestDto,
+  PostGetByIdRequestDto,
+  PostGetRequestDto,
+} from './dto';
 import { PostTypeValue } from '@project/shared/types';
 import { StatusCodes } from 'http-status-codes';
 
-@Controller('post')
+@Controller('posts')
 export class PostController {
   constructor(private readonly postService: PostService) {}
+
+  @Get()
+  public async index(@Query() dto: PostGetRequestDto) {
+    return this.postService.index({
+      pageNumber: Number(dto.pageNumber),
+      pageSize: Number(dto.pageSize),
+    });
+  }
 
   @Get('/:id')
   public async get(@Param() dto: PostGetByIdRequestDto) {

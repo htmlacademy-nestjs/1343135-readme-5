@@ -1,10 +1,12 @@
 import {
+  Pagination,
   Post,
   PostByType,
   PostContent,
   PostLinkContent,
   PostPhotoContent,
   PostQuoteContent,
+  PostStatus,
   PostTextContent,
   PostType,
   PostTypeValue,
@@ -13,6 +15,7 @@ import {
 import { Entity, MemoryRepository } from '@project/shared/repository';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { PostEntity } from './post.entity';
 
 type PostCommonRecord = Post & { content: string; }
 
@@ -125,6 +128,34 @@ export class PostRepository extends MemoryRepository<Entity<Post>> {
     await contentRepository.deleteById(post.content);
 
     super.deleteById(id);
+  }
+
+  public async index({pageNumber, pageSize }: Required<Pagination>) {
+    const sliceStart = (pageNumber - 1) * pageSize;
+    const sliceEnd = sliceStart + pageSize;
+    const allPosts = [...this.memo.values()];
+    const mainPosts = allPosts
+      .sort((a, b) => new Date(b.publishedAt).valueOf() - new Date(a.publishedAt).valueOf())
+      .filter((item) => item.status === PostStatus.Published)
+      .slice(sliceStart, sliceEnd);
+    const postsWithContent = await Promise.all(
+      mainPosts
+        .map(async (item) => {
+          const contentEntity = await this.getContent(item.type, item.content);
+
+          if (!contentEntity) {
+            throw new NotFoundException(`Post with id ${'id' in item ? item.id : ''} has no content`);
+          }
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const{ id, ...content } = contentEntity;
+          return { ...item, content }
+        })
+    );
+
+    return {
+      posts: postsWithContent as PostEntity[],
+      total: allPosts.length,
+    }
   }
 
   private async getContent(type: PostTypeValue, id: string) {

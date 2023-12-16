@@ -1,12 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PostRepository } from './post.repository';
 import { Post, PostStatus } from '@project/shared/types';
-import { PostCreateRequestDto, PostUpdateRequestDto } from './dto';
-import {
-  PostEntity,
-  PostEntityFactory,
-} from './post.entity';
+import { PostCreateRequestDto, PostGetRequestDto, PostGetResponseDto, PostUpdateRequestDto } from './dto';
+import { PostEntity, PostEntityFactory } from './post.entity';
 import { Entity } from '@project/shared/repository';
+import { PostPagination } from './post.const';
 
 @Injectable()
 export class PostService {
@@ -23,6 +21,20 @@ export class PostService {
     }
 
     return post;
+  }
+
+  public async index({
+    pageNumber = PostPagination.pageNumber,
+    pageSize = PostPagination.pageSize,
+  }: PostGetRequestDto): Promise<PostGetResponseDto> {
+    const { posts, total } = await this.postRepository.index({ pageNumber, pageSize });
+
+    return {
+      posts,
+      total,
+      pageNumber,
+      pageSize,
+    };
   }
 
   public async create(dto: PostCreateRequestDto) {
