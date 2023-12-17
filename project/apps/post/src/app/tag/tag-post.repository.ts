@@ -41,4 +41,17 @@ export class TagPostRepository extends MemoryRepository<Entity<TagPost>> {
 
     return this.saveMany(tagPosts);
   }
+
+  public async deleteByPostId(postId: string) {
+    const toDelete = [...this.memo.values()].filter((item) => item.postId === postId);
+    for (const { id } of toDelete) {
+      await this.deleteById(id);
+    }
+  }
+
+  public async findManyByTagId(ids: string[]) {
+    const idSet = new Set(ids);
+
+    return [...this.memo.values()].filter((item) => idSet.has(item.tagId));
+  }
 }

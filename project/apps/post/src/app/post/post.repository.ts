@@ -2,44 +2,31 @@ import {
   Pagination,
   Post,
   PostByType,
-  PostContent,
   PostStatus,
-  PostType,
   PostTypeValue,
+  Tag,
 } from '@project/shared/types';
-import { Entity, MemoryRepository } from '@project/shared/repository';
+import { Entity } from '@project/shared/repository';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { PostEntity } from './post.entity';
-import {
-  PostLinkContentRepository,
-  PostPhotoContentRepository,
-  PostQuoteContentRepository,
-  PostTextContentRepository,
-  PostVideoContentRepository,
-} from './post.content-repository';
+import { PostContentRepositoryFactory } from './post.content-repository';
 import { TagRepository } from '../tag/tag.repository';
 import { TagPostRepository } from '../tag/tag-post.repository';
 
-type PostCommonRecord = Post & { content: string; }
+type PostCommonRecord = Omit<Post, 'content' | 'tags'> & { content: string };
 
 @Injectable()
-export class PostRepository extends MemoryRepository<Entity<Post>> {
+export class PostRepository  {
   protected readonly memo = new Map<string, PostCommonRecord>();
 
   constructor(
-    private readonly postVideoContentRepository: PostVideoContentRepository,
-    private readonly postTextContentRepository: PostTextContentRepository,
-    private readonly postQuoteContentRepository: PostQuoteContentRepository,
-    private readonly postPhotoContentRepository: PostPhotoContentRepository,
-    private readonly postLinkContentRepository: PostLinkContentRepository,
+    private readonly postContentRepositoryFactory: PostContentRepositoryFactory,
     private readonly tagRepository: TagRepository,
     private readonly tagPostRepository: TagPostRepository,
-  ) {
-    super();
-  }
+  ) {}
 
-  public async findById(id: string) {
+  public async findById(id: string): Promise<PostEntity> {
     const post = this.memo.get(id);
 
     if (!post) {
@@ -55,8 +42,7 @@ export class PostRepository extends MemoryRepository<Entity<Post>> {
     const { id: _id, ...content } = contentEntity;
 
     const tagIds = await this.tagPostRepository.findByPost(id);
-    const tags = await this.tagRepository.findByIdMany(tagIds.map((item) => item.tagId));
-    const tagsToReturn = tags
+    const tags = (await this.tagRepository.findByIdMany(tagIds.map((item) => item.tagId)))
       .map((tag) => {
         if (!tag) {
           throw new Error('Could not find a tag');
@@ -69,40 +55,35 @@ export class PostRepository extends MemoryRepository<Entity<Post>> {
     return {
       ...post,
       content,
-      tags: tagsToReturn,
-    } as Entity<Post>;
+      tags,
+    } as PostEntity;
   }
 
   public async save<T extends PostTypeValue>(entity: Entity<PostByType<T>>) {
-    const contentRepository = this.getContentRepository(entity.type);
-    const contentEntity = await contentRepository.save(entity.content);
-    const { id: contentId, ...content } = contentEntity;
-    const tags = entity.tags?.length ? await this.tagRepository.saveMany(entity.tags) : [];
-    const tagsToSave = tags.map((tag) => tag.id);
-    const tagsToReturn = tags.map((tag) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { id, ...rest } = tag;
-      return rest;
-    });
+    const { tags, content, ...entityToSave } = entity;
+    const contentRepository = this.postContentRepositoryFactory.create(entity.type);
+    const contentEntity = await contentRepository.save(content);
+
+    if (!contentEntity.id) {
+      throw new Error('Error saving the content');
+    }
 
     const postToSave = {
-      ...entity,
+      ...entityToSave,
       id: entity.id ?? randomUUID(),
-      tags: tagsToSave,
-      content: contentId,
+      content: contentEntity.id,
     };
-
-    await this.tagPostRepository.saveMany(
-      tagsToSave.flatMap((tagId) => tagId ? [({ tagId, postId: postToSave.id })] : []),
-    );
-
     const postToReturn = {
       ...postToSave,
       content,
-      tags: tagsToReturn,
+      tags,
     };
 
-    this.memo.set(postToSave.id, postToSave as PostCommonRecord);
+    if (tags) {
+      await this.saveTags(postToSave.id, tags);
+    }
+
+    this.memo.set(postToSave.id, postToSave);
 
     return postToReturn;
   }
@@ -114,7 +95,7 @@ export class PostRepository extends MemoryRepository<Entity<Post>> {
       throw new NotFoundException(`Post with id "${id}" not found`);
     }
 
-    const contentRepository = this.getContentRepository(post.type);
+    const contentRepository = this.postContentRepositoryFactory.create(post.type);
     const contentEntity = await contentRepository.findById(post.content);
 
     if (!contentEntity) {
@@ -123,19 +104,17 @@ export class PostRepository extends MemoryRepository<Entity<Post>> {
 
     const updatedContent = await contentRepository.update(
       contentEntity.id,
-      { ...contentEntity, ...entity.content },
+      { ...contentEntity, ...(entity.content || null) },
     );
-    const { id: contentId, ...content } = updatedContent;
-    const updatedPost = { ...post, ...entity, content: contentId, id };
 
-    /**
-     * TODO:
-     * - check if entity patch contains tags
-     * - remove old tags from tagPost repo
-     * - check if all of old tags are used in other posts
-     * - delete unused tags from tags repo
-     * - save new tags in tagPost & tags repos
-    */
+    const { id: contentId, ...content } = updatedContent;
+
+    if (entity.tags) {
+      await this.deleteTags(id);
+      await this.saveTags(id, entity.tags);
+    }
+
+    const updatedPost = { ...post, ...entity, content: contentId, id };
 
     this.memo.set(id, updatedPost);
     return {
@@ -151,20 +130,14 @@ export class PostRepository extends MemoryRepository<Entity<Post>> {
       throw new NotFoundException(`Post with id "${id}" not found`);
     }
 
-    const contentRepository = this.getContentRepository(post.type);
+    const contentRepository = this.postContentRepositoryFactory.create(post.type);
     await contentRepository.deleteById(post.content);
+    await this.deleteTags(id);
 
-    /**
-     * TODO:
-     * - remove tagPosts from tagPost repo
-     * - check if all tags are used in other posts
-     * - delete unused tags from tags repo
-    */
-
-    super.deleteById(id);
+    this.memo.delete(id);
   }
 
-  public async index({pageNumber, pageSize }: Required<Pagination>) {
+  public async index({ pageNumber, pageSize }: Required<Pagination>) {
     /**
      * TODO:
      * - sort by publishedAt, likeCount, commentCount
@@ -198,26 +171,26 @@ export class PostRepository extends MemoryRepository<Entity<Post>> {
     }
   }
 
-  private async getContent(type: PostTypeValue, id: string) {
-    const contentRepository = this.getContentRepository(type);
-    return contentRepository.findById(id);
+  private async deleteTags(postId: string) {
+    const tagPostsToDelete = await this.tagPostRepository.findByPost(postId);
+    await this.tagPostRepository.deleteByPostId(postId);
+
+    for (const tagPost of tagPostsToDelete) {
+      if (!await this.tagPostRepository.findByTag(tagPost.tagId)) {
+        this.tagRepository.deleteById(tagPost.id);
+      }
+    }
   }
 
-  private getContentRepository(type: PostTypeValue)
-    : MemoryRepository<Entity<PostContent>>  {
-    switch (type) {
-      case PostType.Video:
-        return this.postVideoContentRepository;
-      case PostType.Text:
-        return this.postTextContentRepository;
-      case PostType.Quote:
-        return this.postQuoteContentRepository;
-      case PostType.Photo:
-        return this.postPhotoContentRepository;
-      case PostType.Link:
-        return this.postLinkContentRepository;
-      default:
-        throw new Error('Unknown post type');
-    }
+  private async saveTags(postId: string, tags: Tag[]) {
+    const savedTags = await this.tagRepository.saveMany(tags);
+    await this.tagPostRepository.saveMany(
+      savedTags.flatMap((tag) => tag.id ? [({ tagId: tag.id, postId })] : []),
+    );
+  }
+
+  private async getContent(type: PostTypeValue, id: string) {
+    const contentRepository = this.postContentRepositoryFactory.create(type);
+    return contentRepository.findById(id);
   }
 }
