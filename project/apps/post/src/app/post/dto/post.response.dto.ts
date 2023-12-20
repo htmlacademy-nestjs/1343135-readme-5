@@ -1,8 +1,34 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { PostType, PostTypeValue } from '@project/shared/types';
+import { ApiProperty, ApiPropertyOptional, IntersectionType } from '@nestjs/swagger';
+import { PostStatus, PostStatusValue, PostType, PostTypeValue } from '@project/shared/types';
 import { PostTagDto } from './post.tag.dto';
 
-export class PostCreateCommonDto {
+export class PostResponseCommonDto {
+  @ApiProperty({
+    description: 'Post id',
+    example: 'df2c98c5-3aa1-4633-b9ad-614a625846eb',
+  })
+  public id: string;
+
+  @ApiProperty({
+    description: 'Post status',
+    example: PostStatus.Published,
+    enum: PostStatus,
+    type: PostStatus,
+  })
+  public status: PostStatusValue;
+
+  @ApiProperty({
+    description: 'Date and time of post creation',
+    example: '2023-12-20T21:20:06.710Z',
+  })
+  public createdAt: string;
+
+  @ApiProperty({
+    description: 'Date and time of post publication',
+    example: '2023-12-20T21:20:06.710Z',
+  })
+  public publishedAt: string;
+
   @ApiProperty({
     description: 'Author id',
     example: 'df2c98c5-3aa1-4633-b9ad-614a625846eb',
@@ -48,7 +74,7 @@ class PostVideoContent {
   public url: string;
 }
 
-export class PostVideoCreateRequestDto extends PostCreateCommonDto {
+export class PostVideoResponseDto extends PostResponseCommonDto {
   @ApiProperty({
     description: 'Type of a post',
     example: PostType.Video,
@@ -82,7 +108,7 @@ class PostTextContent {
   public text: string;
 }
 
-export class PostTextCreateRequestDto extends PostCreateCommonDto {
+export class PostTextResponseDto extends PostResponseCommonDto {
   @ApiProperty({
     description: 'Type of a post',
     example: PostType.Text,
@@ -110,7 +136,7 @@ class PostQuoteContent {
   public quoteAuthor: string;
 }
 
-export class PostQuoteCreateRequestDto extends PostCreateCommonDto {
+export class PostQuoteResponseDto extends PostResponseCommonDto {
   @ApiProperty({
     description: 'Type of a post',
     example: PostType.Quote,
@@ -131,7 +157,7 @@ class PostPhotoContent {
   })
   public url: string;
 }
-export class PostPhotoCreateRequestDto extends PostCreateCommonDto {
+export class PostPhotoResponseDto extends PostResponseCommonDto {
   @ApiProperty({
     description: 'Post type',
     example: PostType.Photo,
@@ -158,7 +184,7 @@ class PostLinkContent {
   })
   public description?: string;
 }
-export class PostLinkCreateRequestDto extends PostCreateCommonDto {
+export class PostLinkResponseDto extends PostResponseCommonDto {
   @ApiProperty({
     description: 'Post type',
     example: PostType.Link,
@@ -172,13 +198,10 @@ export class PostLinkCreateRequestDto extends PostCreateCommonDto {
   public content: PostLinkContent;
 }
 
-export type PostTypeCreateRequestDto = {
-  [PostType.Video]: PostVideoCreateRequestDto;
-  [PostType.Text]: PostTextCreateRequestDto;
-  [PostType.Quote]: PostQuoteCreateRequestDto;
-  [PostType.Photo]: PostPhotoCreateRequestDto;
-  [PostType.Link]: PostLinkCreateRequestDto;
-};
-
-export type PostCreateByTypeRequestDto<T extends PostTypeValue> = PostTypeCreateRequestDto[T];
-export type PostCreateRequestDto = PostTypeCreateRequestDto[PostTypeValue];
+export const PostResponseDto = IntersectionType(PostVideoResponseDto, PostTextResponseDto, PostQuoteResponseDto, PostPhotoResponseDto, PostLinkResponseDto);
+// export type PostResponseDto =
+//   | PostVideoResponseDto
+//   | PostTextResponseDto
+//   | PostQuoteResponseDto
+//   | PostPhotoResponseDto
+//   | PostLinkResponseDto;

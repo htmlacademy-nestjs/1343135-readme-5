@@ -1,15 +1,21 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
 import { PostService } from './post.service';
 import {
-  PostCreateRequestDto,
   PostUpdateRequestDto,
   PostGetByIdRequestDto,
   PostGetRequestDto,
   PostGetResponseDto,
+  PostVideoCreateRequestDto,
+  PostTextCreateRequestDto,
+  PostQuoteCreateRequestDto,
+  PostPhotoCreateRequestDto,
+  PostLinkCreateRequestDto,
+  PostResponseDto,
 } from './dto';
-import { PostTypeValue } from '@project/shared/types';
+import { PostType } from '@project/shared/types';
 import { StatusCodes } from 'http-status-codes';
 import { ApiResponse, ApiTags } from '@nestjs/swagger';
+import { PostLinkResponseDto, PostPhotoResponseDto, PostQuoteResponseDto, PostTextResponseDto, PostVideoResponseDto } from './dto/post.response.dto';
 
 @ApiTags('posts')
 @Controller('posts')
@@ -32,7 +38,7 @@ export class PostController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Post info by id.',
-    type: PostGetResponseDto,
+    type: PostResponseDto,
   })
   @Get('/:id')
   public async get(@Param() dto: PostGetByIdRequestDto) {
@@ -42,17 +48,56 @@ export class PostController {
   @ApiResponse({
     status: HttpStatus.CREATED,
     description: 'New post is created.',
-    type: PostGetResponseDto,
+    type: PostVideoResponseDto,
   })
-  @Post('/:type')
-  public async create(@Param('type') type: PostTypeValue, @Body() dto: PostCreateRequestDto) {
-    return this.postService.create({ ...dto, type } as PostCreateRequestDto);
+  @Post(`/${PostType.Video}`)
+  public async createVideo(@Body() dto: PostVideoCreateRequestDto) {
+    return this.postService.create({ ...dto, type: PostType.Video });
   }
 
   @ApiResponse({
-    status: HttpStatus.OK,
+    status: HttpStatus.CREATED,
+    description: 'New post is created.',
+    type: PostTextResponseDto,
+  })
+  @Post(`/${PostType.Text}`)
+  public async createText(@Body() dto: PostTextCreateRequestDto) {
+    return this.postService.create({ ...dto, type: PostType.Text });
+  }
+
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'New post is created.',
+    type: PostQuoteResponseDto,
+  })
+  @Post(`/${PostType.Quote}`)
+  public async createQuote(@Body() dto: PostQuoteCreateRequestDto) {
+    return this.postService.create({ ...dto, type: PostType.Quote });
+  }
+
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'New post is created.',
+    type: PostPhotoResponseDto,
+  })
+  @Post(`/${PostType.Photo}`)
+  public async createPhoto(@Body() dto: PostPhotoCreateRequestDto) {
+    return this.postService.create({ ...dto, type: PostType.Photo });
+  }
+
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'New post is created.',
+    type: PostLinkResponseDto,
+  })
+  @Post(`/${PostType.Link}`)
+  public async createLink(@Body() dto: PostLinkCreateRequestDto) {
+    return this.postService.create({ ...dto, type: PostType.Link });
+  }
+
+  @ApiResponse({
     description: 'Post is updated.',
-    type: PostGetResponseDto,
+    type: PostResponseDto,
   })
   @Patch('/:id')
   public async update(

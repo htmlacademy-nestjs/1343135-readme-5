@@ -1,4 +1,5 @@
-import { PostType, PostTypeValue, Tag } from '@project/shared/types';
+import { IntersectionType } from '@nestjs/swagger';
+import { PostType, Tag } from '@project/shared/types';
 
 export class PostUpdateCommonDto {
   public tags?: Tag[];
@@ -37,4 +38,11 @@ export type PostTypeUpdateRequestDto = {
   [PostType.Link]: PostLinkUpdateRequestDto;
 };
 
-export type PostUpdateRequestDto = PostTypeUpdateRequestDto[PostTypeValue];
+export const PostUpdateRequestDto = IntersectionType(
+  PostVideoUpdateRequestDto,
+  PostTextUpdateRequestDto,
+  PostQuoteUpdateRequestDto,
+  PostPhotoUpdateRequestDto,
+  PostLinkUpdateRequestDto,
+);
+export type PostUpdateRequestDto = InstanceType<typeof PostUpdateRequestDto>;
