@@ -1,12 +1,12 @@
 import { ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { UserMemoryRepository } from '../user/user.memory-repository';
+import { UserRepository } from '../user/user.repository';
 import { UserChangePasswordRequestDto, UserCreateRequestDto, UserGetRequestDto, UserLoginRequestDto } from './dto';
 import { UserEntity } from '../user/user.entity';
 import { AuthService } from './auth.service.interface';
 
 @Injectable()
 export class DefaultAuthService implements AuthService {
-  constructor(private readonly userRepository: UserMemoryRepository) {}
+  constructor(private readonly userRepository: UserRepository) {}
 
   public async register(dto: UserCreateRequestDto) {
     const existing = await this.userRepository.findByEmail(dto.email);
@@ -61,8 +61,8 @@ export class DefaultAuthService implements AuthService {
       throw new UnauthorizedException('Invalid login or password');
     }
 
-    user.setPassword(dto.newPassword);
+    await user.setPassword(dto.newPassword);
 
-    return this.userRepository.save(user);
+    return this.userRepository.update(dto.id, user);
   }
 }
